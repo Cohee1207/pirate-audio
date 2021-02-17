@@ -32,7 +32,7 @@ warning() {
 # Update apt and install dependencies
 inform "Updating apt and installing dependencies"
 apt update
-apt install -y python3-rpi.gpio python3-spidev python3-pip python3-pil python3-numpy
+apt install -y python3-pip
 echo
 
 # Verify python version via pip
@@ -65,12 +65,6 @@ if [ "$RESULT" == "0" ]; then
   echo
 fi
 
-# Enable SPI
-raspi-config nonint do_spi 0
-
-# Add necessary lines to config.txt (if they don't exist)
-add_to_config_text "gpio=25=op,dh" /boot/config.txt
-add_to_config_text "dtoverlay=hifiberry-dac" /boot/config.txt
 
 if [ -f "$MOPIDY_CONFIG" ]; then
   inform "Backing up mopidy config to: $MOPIDY_CONFIG.backup-$DATESTAMP"
@@ -119,11 +113,6 @@ else
   echo
 fi
 
-# Install support plugins for Pirate Audio
-inform "Installing Pirate Audio plugins..."
-$PIP_BIN install --upgrade Mopidy-PiDi pidi-display-pil pidi-display-st7789 mopidy-raspberry-gpio
-echo
-
 # Reset mopidy.conf to its default state
 if [ $EXISTING_CONFIG ]; then
   warning "Resetting $MOPIDY_CONFIG to package defaults."
@@ -137,14 +126,6 @@ fi
 # Updated to *append* config values to mopidy.conf, as per: https://github.com/pimoroni/pirate-audio/issues/1#issuecomment-557556802
 inform "Configuring Mopidy"
 cat <<EOF >> $MOPIDY_CONFIG
-
-[raspberry-gpio]
-enabled = true
-bcm5 = play_pause,active_low,250
-bcm6 = volume_down,active_low,250
-bcm16 = next,active_low,250
-bcm20 = volume_up,active_low,250
-bcm24 = volume_up,active_low,250
 
 [file]
 enabled = true
@@ -164,11 +145,6 @@ excluded_file_extensions =
 follow_symlinks = false
 metadata_timeout = 1000
 
-[pidi]
-enabled = true
-display = st7789
-rotation = 90
-
 [mpd]
 hostname = 0.0.0.0
 
@@ -187,11 +163,6 @@ client_id =
 client_secret =
 EOF
 echo
-
-# MAYBE?: Remove the sources.list to avoid any future issues with apt.mopidy.com failing
-# rm -f /etc/apt/sources.list.d/mopidy.list
-
-usermod -a -G spi,i2c,gpio,video mopidy
 
 inform "Enabling and starting Mopidy"
 sudo systemctl enable mopidy
